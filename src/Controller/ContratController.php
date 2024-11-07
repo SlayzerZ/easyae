@@ -138,7 +138,6 @@ class ContratController extends AbstractController
             $contrat->setStatus("off");
             $entityManager->persist($contrat);
         }
-
         $entityManager->flush();
         $cache->invalidateTags(["contrat"]);
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
