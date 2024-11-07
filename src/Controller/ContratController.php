@@ -14,7 +14,9 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
@@ -23,29 +25,37 @@ use Symfony\Contracts\Cache\TagAwareCacheInterface;
 class ContratController extends AbstractController
 {
     #[Route(name: 'api_contrat_index', methods: ["GET"])]
-    public function getAll(ContratRepository $contratRepository, SerializerInterface $serializer, TagAwareCacheInterface $cache): JsonResponse
+    public function getAll(UserInterface $userInterface, ContratRepository $contratRepository, SerializerInterface $serializer, TagAwareCacheInterface $cache): JsonResponse
     {
         $idCache = "getAllContrats";
-        // $contratList = $contratRepository->findAll();
-        // $contratJson = $serializer->serialize($contratList, 'json', ['groups' => "contrat"]);
 
-        $contratJson = $cache->get($idCache, function (ItemInterface $item) use ($contratRepository, $serializer) {
+        $contratJson = $cache->get($idCache, function (ItemInterface $item) use ($contratRepository, $serializer, $userInterface) {
             $item->tag("contrat");
             $item->tag("client");
             $item->tag("contrat_type");
             $item->tag("product");
+            // $contratList = $contratRepository->findBy(['createdAt' => $userInterface->getUserIdentifier()]);
+            // foreach ($userInterface->getRoles() as $userRole) {
+            //     if ($userRole == "ROLE_ADMIN") {
+            //         $contratList = $contratRepository->findAll();
+            //         break;
+            //     }
+            // }
             $contratList = $contratRepository->findAll();
             $contratJson = $serializer->serialize($contratList, 'json', ['groups' => "contrat"]);
             return $contratJson;
         });
 
-
+        // return new JsonResponse($serializer->serialize($userInterface->getRoles(), 'json', ['groups' => "contrat"]), JsonResponse::HTTP_OK, [], true);
         return new JsonResponse($contratJson, JsonResponse::HTTP_OK, [], true);
     }
 
     #[Route(path: "/{id}", name: 'api_contrat_show', methods: ["GET"])]
-    public function get(Contrat $contrat, SerializerInterface $serializer): JsonResponse
+    public function get(UserInterface $userInterface, Contrat $contrat, SerializerInterface $serializer): JsonResponse
     {
+        // if ($contrat->getCreatedBy() != $userInterface->getUserIdentifier()) {
+        //     return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+        // }
 
         $contratJson = $serializer->serialize($contrat, 'json', ['groups' => "contrat"]);
 
@@ -53,7 +63,7 @@ class ContratController extends AbstractController
     }
 
     #[Route(name: 'api_contrat_new', methods: ["POST"])]
-    public function create(Request $request, clientRepository $clientRepository, ContratTypeRepository $typeRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager, TagAwareCacheInterface $cache): JsonResponse
+    public function create(ValidatorInterface $validator, Request $request, clientRepository $clientRepository, ContratTypeRepository $typeRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager, TagAwareCacheInterface $cache): JsonResponse
     {
         $data = $request->toArray();
         $contrat = $serializer->deserialize($request->getContent(), Contrat::class, 'json', []);
@@ -69,6 +79,10 @@ class ContratController extends AbstractController
             ->setEndAt($end)
             ->setStatus("on")
         ;
+        $errors = $validator->validate($contrat);
+        if (count($errors) > 0) {
+            return new JsonResponse($serializer->serialize($errors, 'json'), JsonResponse::HTTP_BAD_REQUEST, [], true);
+        }
         $entityManager->persist($contrat);
         $entityManager->flush();
         $cache->invalidateTags(["contrat"]);
@@ -111,11 +125,23 @@ class ContratController extends AbstractController
     }
 
     #[Route(path: "/{id}", name: 'api_contrat_delete', methods: ["DELETE"])]
-    public function delete(Contrat $contrat, Request $request, EntityManagerInterface $entityManager, TagAwareCacheInterface $cache): JsonResponse
+    public function delete(UserInterface $userInterface, Contrat $contrat, Request $request, EntityManagerInterface $entityManager, TagAwareCacheInterface $cache): JsonResponse
     {
+        $admin = false;
         $data = $request->toArray();
+        foreach ($userInterface->getRoles() as $userRole) {
+            if ($userRole == "ROLE_ADMIN") {
+                $admin = true;
+                break;
+            }
+        }
         if (isset($data['force']) && $data['force'] === true) {
-            $entityManager->remove($contrat);
+            if ($admin) {
+                $entityManager->remove($contrat);
+            } else {
+                $contrat->setStatus("off");
+                $entityManager->persist($contrat);
+            }
         } else {
             $contrat->setStatus("off");
             $entityManager->persist($contrat);

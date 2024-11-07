@@ -16,8 +16,7 @@ class AutoDiscorveryNormalizer implements NormalizerInterface
         #[Autowire(service: 'serializer.normalizer.object')]
         private NormalizerInterface $normalizer,
         private UrlGeneratorInterface $urlGenerator
-    ) {
-    }
+    ) {}
 
     public function normalize($object, ?string $format = null, array $context = []): array
     {
