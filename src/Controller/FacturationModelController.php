@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Controller;
+
 use App\Entity\FacturationModel;
 use App\Repository\FacturationModelRepository;
 use App\Repository\ClientRepository;
@@ -33,7 +34,6 @@ class FacturationModelController extends AbstractController
             $facturationModelJson = $serializer->serialize($facturationModelList, 'json', ['groups' => "facturationModel"]);
 
             return $facturationModelJson;
-
         });
 
 
@@ -64,7 +64,7 @@ class FacturationModelController extends AbstractController
     }
 
     #[Route(path: "/{id}", name: 'api_facturation_model_edit', methods: ["PATCH"])]
-    public function update(tagAwareCacheInterface $cache ,facturationModel $facturationModel, UrlGeneratorInterface $urlGenerator, Request $request, ClientRepository $clientRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
+    public function update(tagAwareCacheInterface $cache, facturationModel $facturationModel, UrlGeneratorInterface $urlGenerator, Request $request, ClientRepository $clientRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = $request->toArray();
         if (isset($data['client'])) {
@@ -73,7 +73,7 @@ class FacturationModelController extends AbstractController
         }
 
 
-        $updatedFacturationModel = $serializer->deserialize($request->getContent(), Account::class, 'json', [AbstractNormalizer::OBJECT_TO_POPULATE => $facturationModel]);
+        $updatedFacturationModel = $serializer->deserialize($request->getContent(), FacturationModel::class, 'json', [AbstractNormalizer::OBJECT_TO_POPULATE => $facturationModel]);
         $updatedFacturationModel
             ->setClient($client ?? $updatedFacturationModel->getClient())
             ->setStatus("on")
@@ -81,7 +81,7 @@ class FacturationModelController extends AbstractController
 
         $entityManager->persist($updatedFacturationModel);
         $entityManager->flush();
-        $cache->invalidateTags(tag: ["facturationModel","client"]);
+        $cache->invalidateTags(["facturationModel", "client"]);
         $facturationModelJson = $serializer->serialize($updatedFacturationModel, 'json', ['groups' => "facturationModel"]);
         $location = $urlGenerator->generate("api_facturation_model_show", ['id' => $updatedFacturationModel->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT, ["Location" => $location]);

@@ -13,13 +13,14 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 use App\Service\DeleteService;
+use Symfony\Component\HttpFoundation\Request;
 
 #[Route('/api/facturation')]
 class FacturationController extends AbstractController
 {
     #[Route('/{contratId}', name: 'api_facturation_create_or_show', methods: ["GET", "POST"])]
     public function createOrShow(
-        $contratId, 
+        $contratId,
         ContratRepository $contratRepository,
         FacturationRepository $facturationRepository,
         EntityManagerInterface $entityManager,
@@ -50,11 +51,11 @@ class FacturationController extends AbstractController
         foreach ($products as $product) {
             $totalPrice = $product->getPriceUnit() * $product->getQuantity();
             $totalHT += $totalPrice;
-            
+
             $fee = $product->getFees();
-            
+
             $totalTTC += $totalPrice * (1 + $fee / 100);
-            
+
             $productDetails[] = [
                 'product' => $product->getType()->getName(),
                 'quantity' => $product->getQuantity(),
@@ -77,7 +78,7 @@ class FacturationController extends AbstractController
 
         return new JsonResponse($factureJson, JsonResponse::HTTP_OK, [], true);
     }
-      #[Route(path: '/{id}', name: 'api_facturation_delete', methods: ["DELETE"])]
+    #[Route(path: '/{id}', name: 'api_facturation_delete', methods: ["DELETE"])]
     public function delete(Facturation $facturation, Request $request, DeleteService $deleteService): JsonResponse
     {
         $data = $request->toArray();
