@@ -125,23 +125,14 @@ class ContratController extends AbstractController
     }
 
     #[Route(path: "/{id}", name: 'api_contrat_delete', methods: ["DELETE"])]
-    public function delete(UserInterface $userInterface, Contrat $contrat, Request $request, EntityManagerInterface $entityManager, TagAwareCacheInterface $cache): JsonResponse
+    public function delete(Contrat $contrat, Request $request, EntityManagerInterface $entityManager, TagAwareCacheInterface $cache): JsonResponse
     {
-        $admin = false;
         $data = $request->toArray();
-        foreach ($userInterface->getRoles() as $userRole) {
-            if ($userRole == "ROLE_ADMIN") {
-                $admin = true;
-                break;
-            }
-        }
         if (isset($data['force']) && $data['force'] === true) {
-            if ($admin) {
-                $entityManager->remove($contrat);
-            } else {
-                $contrat->setStatus("off");
-                $entityManager->persist($contrat);
+            if (!$this->isGranted("ROLE_ADMIN")) {
+                return new JsonResponse(["error" => "Hanhanhaaaaan vous n'avez pas dit le mot magiiiiqueeuuuuuh"], JsonResponse::HTTP_FORBIDDEN);
             }
+            $entityManager->remove($contrat);
         } else {
             $contrat->setStatus("off");
             $entityManager->persist($contrat);
