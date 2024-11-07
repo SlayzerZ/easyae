@@ -13,6 +13,8 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 #[Route('/api/fonction')]
@@ -24,6 +26,10 @@ class FonctionController extends AbstractController
         $idCache = "getAllFonctions";
         $fonctionJson = $cache->get($idCache, function (ItemInterface $item) use ($fonctionRepository, $serializer) {
             $item->tag("fonction");
+            // $contratList = $contratRepository->findBy(['createdAt' => $userInterface->getUserIdentifier()]);
+            // if ($this->isGranted("ROLE_ADMIN")) {
+            //     $contratList = $contratRepository->findAll();
+            // }
             $fonctionList = $fonctionRepository->findAll();
             return $serializer->serialize($fonctionList, 'json', ['groups' => "fonction"]);
         });
@@ -34,11 +40,18 @@ class FonctionController extends AbstractController
     #[Route(path: '/{id}', name: 'api_fonction_show', methods: ["GET"])]
     public function get(Fonction $fonction, SerializerInterface $serializer): JsonResponse
     {
+        // if (!$this->isGranted("ROLE_ADMIN")) {
+        // if ($contrat->getCreatedBy() != $userInterface->getUserIdentifier()) {
+        //     return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+        // }
+        // }
+
         $fonctionJson = $serializer->serialize($fonction, 'json', ['groups' => "fonction"]);
         return new JsonResponse($fonctionJson, JsonResponse::HTTP_OK, [], true);
     }
 
     #[Route(name: 'api_fonction_new', methods: ["POST"])]
+    #[IsGranted("ROLE_ADMIN", message: "Hanhanhaaaaan vous n'avez pas dit le mot magiiiiqueeuuuuuh")]
     public function create(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, TagAwareCacheInterface $cache): JsonResponse
     {
         $fonction = $serializer->deserialize($request->getContent(), Fonction::class, 'json', []);

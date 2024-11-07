@@ -17,6 +17,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
@@ -25,21 +26,18 @@ use Symfony\Contracts\Cache\TagAwareCacheInterface;
 class ContratController extends AbstractController
 {
     #[Route(name: 'api_contrat_index', methods: ["GET"])]
-    public function getAll(UserInterface $userInterface, ContratRepository $contratRepository, SerializerInterface $serializer, TagAwareCacheInterface $cache): JsonResponse
+    public function getAll(ContratRepository $contratRepository, SerializerInterface $serializer, TagAwareCacheInterface $cache): JsonResponse
     {
         $idCache = "getAllContrats";
 
-        $contratJson = $cache->get($idCache, function (ItemInterface $item) use ($contratRepository, $serializer, $userInterface) {
+        $contratJson = $cache->get($idCache, function (ItemInterface $item) use ($contratRepository, $serializer) {
             $item->tag("contrat");
             $item->tag("client");
             $item->tag("contrat_type");
             $item->tag("product");
             // $contratList = $contratRepository->findBy(['createdAt' => $userInterface->getUserIdentifier()]);
-            // foreach ($userInterface->getRoles() as $userRole) {
-            //     if ($userRole == "ROLE_ADMIN") {
-            //         $contratList = $contratRepository->findAll();
-            //         break;
-            //     }
+            // if ($this->isGranted("ROLE_ADMIN")) {
+            //     $contratList = $contratRepository->findAll();
             // }
             $contratList = $contratRepository->findAll();
             $contratJson = $serializer->serialize($contratList, 'json', ['groups' => "contrat"]);
@@ -53,8 +51,10 @@ class ContratController extends AbstractController
     #[Route(path: "/{id}", name: 'api_contrat_show', methods: ["GET"])]
     public function get(UserInterface $userInterface, Contrat $contrat, SerializerInterface $serializer): JsonResponse
     {
+        // if (!$this->isGranted("ROLE_ADMIN")) {
         // if ($contrat->getCreatedBy() != $userInterface->getUserIdentifier()) {
         //     return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+        // }
         // }
 
         $contratJson = $serializer->serialize($contrat, 'json', ['groups' => "contrat"]);
@@ -63,6 +63,7 @@ class ContratController extends AbstractController
     }
 
     #[Route(name: 'api_contrat_new', methods: ["POST"])]
+    #[IsGranted("ROLE_ADMIN", message: "Hanhanhaaaaan vous n'avez pas dit le mot magiiiiqueeuuuuuh")]
     public function create(ValidatorInterface $validator, Request $request, clientRepository $clientRepository, ContratTypeRepository $typeRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager, TagAwareCacheInterface $cache): JsonResponse
     {
         $data = $request->toArray();

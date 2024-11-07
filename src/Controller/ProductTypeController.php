@@ -16,6 +16,7 @@ use Symfony\Contracts\Cache\TagAwareCacheInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 #[Route('/api/productType')]
@@ -29,24 +30,34 @@ class ProductTypeController extends AbstractController
         $idCache = "getAllProductType";
         $productTypeJson = $cache->get($idCache, function (ItemInterface $item) use ($productTypeRepository, $serializer) {
             $item->tag("productType");
+            // $contratList = $contratRepository->findBy(['createdAt' => $userInterface->getUserIdentifier()]);
+            // if ($this->isGranted("ROLE_ADMIN")) {
+            //     $contratList = $contratRepository->findAll();
+            // }
             $productTypeList = $productTypeRepository->findAll();
             $productTypeJson = $serializer->serialize($productTypeList, 'json', ['groups' => "productType"]);
-
             return $productTypeJson;
         });
 
         return new JsonResponse($productTypeJson, Response::HTTP_OK, [], true);
     }
 
-    #[Route(path: '/{id}', name: 'api_product_type', methods: ["GET"] )]
-    public function get(ProductType $productType, SerializerInterface $serializer):JsonResponse
+    #[Route(path: '/{id}', name: 'api_product_type', methods: ["GET"])]
+    public function get(ProductType $productType, SerializerInterface $serializer): JsonResponse
     {
+        // if (!$this->isGranted("ROLE_ADMIN")) {
+        // if ($contrat->getCreatedBy() != $userInterface->getUserIdentifier()) {
+        //     return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+        // }
+        // }
+
         $productTypeJson = $serializer->serialize($productType, 'json', ['groups' => "productType"]);
 
         return new JsonResponse($productTypeJson, Response::HTTP_OK, [], true);
     }
 
     #[Route(name: 'api_product_type_new', methods: ["POST"])]
+    #[IsGranted("ROLE_ADMIN", message: "Hanhanhaaaaan vous n'avez pas dit le mot magiiiiqueeuuuuuh")]
     public function create(ValidatorInterface $validator, TagAwareCacheInterface $cache, Request $request, ProductTypeRepository $productTypeRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = $request->toArray();
@@ -58,7 +69,6 @@ class ProductTypeController extends AbstractController
         $errors = $validator->validate($productType);
         if (count($errors) > 0) {
             return new JsonResponse($serializer->serialize($errors, 'json'), JsonResponse::HTTP_BAD_REQUEST, [], true);
-
         }
         $entityManager->persist($productType);
         $entityManager->flush();
@@ -96,12 +106,9 @@ class ProductTypeController extends AbstractController
         $data = $request->toArray();
         if (isset($data['force']) && $data['force'] === true) {
             $entityManager->remove($productType);
-
-
         } else {
             $productType
-                ->setStatus("off")
-            ;
+                ->setStatus("off");
 
             $entityManager->persist($productType);
         }
@@ -112,6 +119,4 @@ class ProductTypeController extends AbstractController
         $cache->invalidateTags(["productType"]);
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
     }
-
-
 }

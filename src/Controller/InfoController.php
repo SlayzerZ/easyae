@@ -16,6 +16,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 
@@ -31,11 +32,14 @@ class InfoController extends AbstractController
         $infoJson = $cache->get($idCache, function (ItemInterface $item) use ($infoRepository, $serializer) {
             $item->tag("info");
             $item->tag("type");
+            // $contratList = $contratRepository->findBy(['createdAt' => $userInterface->getUserIdentifier()]);
+            // if ($this->isGranted("ROLE_ADMIN")) {
+            //     $contratList = $contratRepository->findAll();
+            // }
             $infoList = $infoRepository->findAll();
             $infoJson = $serializer->serialize($infoList, 'json', ['groups' => "info"]);
 
             return $infoJson;
-
         });
 
 
@@ -46,6 +50,12 @@ class InfoController extends AbstractController
     {
         // $infoList = $infoRepository->find($id);
 
+        // if (!$this->isGranted("ROLE_ADMIN")) {
+        // if ($contrat->getCreatedBy() != $userInterface->getUserIdentifier()) {
+        //     return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+        // }
+        // }
+
         $infoJson = $serializer->serialize($info, 'json', ['groups' => "info"]);
 
 
@@ -53,7 +63,7 @@ class InfoController extends AbstractController
     }
 
     #[Route(name: 'api_info_new', methods: ["POST"])]
-
+    #[IsGranted("ROLE_ADMIN", message: "Hanhanhaaaaan vous n'avez pas dit le mot magiiiiqueeuuuuuh")]
     public function create(ValidatorInterface $validator, TagAwareCacheInterface $cache, Request $request, SerializerInterface $serializer, InfoTypeRepository $infoTypeRepository, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = $request->toArray();
@@ -104,8 +114,7 @@ class InfoController extends AbstractController
             $entityManager->remove($info);
         } else {
             $info
-                ->setStatus("off")
-            ;
+                ->setStatus("off");
             $entityManager->persist($info);
         }
         $entityManager->flush();

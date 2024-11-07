@@ -11,6 +11,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Contracts\Cache\ItemInterface;
 
@@ -22,8 +24,7 @@ class ContactLinkTypeController extends AbstractController
 {
     public function __construct(
         private readonly TagAwareCacheInterface $cache
-    )
-    {}
+    ) {}
 
     #[Route(name: 'api_contact_link_type_index', methods: ["GET"])]
     public function getAll(ContactLinkTypeRepository $contactLinkTypeRepository, SerializerInterface $serializer, TagAwareCacheInterface $cache): JsonResponse
@@ -32,6 +33,10 @@ class ContactLinkTypeController extends AbstractController
         $contactLinkTypeJson = $cache->get($idCache, function (ItemInterface $item) use ($contactLinkTypeRepository, $serializer) {
             $item->tag("contactLinkType");
             $item->tag("client");
+            // $contratList = $contratRepository->findBy(['createdAt' => $userInterface->getUserIdentifier()]);
+            // if ($this->isGranted("ROLE_ADMIN")) {
+            //     $contratList = $contratRepository->findAll();
+            // }
             $contactLinkTypeList = $contactLinkTypeRepository->findAll();
             $contactLinkTypeJson = $serializer->serialize($contactLinkTypeList, 'json', ['groups' => "contactLinkType"]);
             return $contactLinkTypeJson;
@@ -44,6 +49,12 @@ class ContactLinkTypeController extends AbstractController
     #[Route(path: '/{id}', name: 'api_contact_link_type_show', methods: ["GET"])]
     public function get(ContactLinkType $contactLinkType, SerializerInterface $serializer): JsonResponse
     {
+        // if (!$this->isGranted("ROLE_ADMIN")) {
+        // if ($contrat->getCreatedBy() != $userInterface->getUserIdentifier()) {
+        //     return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+        // }
+        // }
+
         $contactLinkTypeJson = $serializer->serialize($contactLinkType, 'json', ['groups' => "contactLinkType"]);
 
         return new JsonResponse($contactLinkTypeJson, JsonResponse::HTTP_OK, [], true);
@@ -57,7 +68,7 @@ class ContactLinkTypeController extends AbstractController
         $entityManager->persist($updatedContactLinkType);
         $entityManager->flush();
 
-//        $contactLinkTypeJson = $serializer->serialize($updatedContactLinkType, 'json', ['groups' => "contactLinkType"]);
+        //        $contactLinkTypeJson = $serializer->serialize($updatedContactLinkType, 'json', ['groups' => "contactLinkType"]);
 
 
         $cache->invalidateTags(["contactLinkType", "client"]);

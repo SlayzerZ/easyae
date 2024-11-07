@@ -10,6 +10,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class MediaController extends AbstractController
@@ -30,9 +32,9 @@ class MediaController extends AbstractController
         $location = $location . str_replace("/public/", "", $media->getPublicPath() . "/" . $media->getRealPath());
         return $media ?
             new JsonResponse($serializer->serialize($media, 'json', []), Response::HTTP_OK, ["Location" => $location], true) : new JsonResponse(null, Response::HTTP_NOT_FOUND);
-
     }
     #[Route('/api/media', name: 'app_media_new', methods: ["POST"])]
+    #[IsGranted("ROLE_ADMIN", message: "Hanhanhaaaaan vous n'avez pas dit le mot magiiiiqueeuuuuuh")]
     public function new(Request $request, SerializerInterface $serializer, UrlGeneratorInterface $urlGenerator, EntityManagerInterface $entityManager): JsonResponse
     {
         $media = new Media();

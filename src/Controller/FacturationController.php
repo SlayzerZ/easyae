@@ -15,6 +15,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
@@ -30,9 +31,13 @@ class FacturationController extends AbstractController
         $facturationJson = $cache->get($idCache, function (ItemInterface $item) use ($facturationRepository, $serializer) {
             $item->tag("facturation");
             $item->tag("contrat");
+            // $contratList = $contratRepository->findBy(['createdAt' => $userInterface->getUserIdentifier()]);
+            // if ($this->isGranted("ROLE_ADMIN")) {
+            //     $contratList = $contratRepository->findAll();
+            // }
             $facturationList = $facturationRepository->findAll();
             $facturationJson = $serializer->serialize($facturationList, 'json', ['groups' => "facturation"]);
-            
+
             return $facturationJson;
         });
 
@@ -42,12 +47,19 @@ class FacturationController extends AbstractController
     #[Route(path: '/{id}', name: 'api_facturation_show', methods: ["GET"])]
     public function get(Facturation $facturation, SerializerInterface $serializer): JsonResponse
     {
+        // if (!$this->isGranted("ROLE_ADMIN")) {
+        // if ($contrat->getCreatedBy() != $userInterface->getUserIdentifier()) {
+        //     return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+        // }
+        // }
+
         $facturationJson = $serializer->serialize($facturation, 'json', ['groups' => "facturation"]);
 
         return new JsonResponse($facturationJson, JsonResponse::HTTP_OK, [], true);
     }
 
     #[Route(name: 'api_facturation_new', methods: ["POST"])]
+    #[IsGranted("ROLE_ADMIN", message: "Hanhanhaaaaan vous n'avez pas dit le mot magiiiiqueeuuuuuh")]
     public function create(Request $request, ContratRepository $contratRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager, TagAwareCacheInterface $cache): JsonResponse
     {
         $data = $request->toArray();
@@ -64,14 +76,14 @@ class FacturationController extends AbstractController
     }
 
     #[Route(path: '/{id}', name: 'api_facturation_edit', methods: ["PATCH"])]
-    public function update(TagAwareCacheInterface $cache,Facturation $facturation, Request $request, UrlGeneratorInterface $urlGenerator, ContratRepository $contratRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
+    public function update(TagAwareCacheInterface $cache, Facturation $facturation, Request $request, UrlGeneratorInterface $urlGenerator, ContratRepository $contratRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = $request->toArray();
         if (isset($data["contrat"])) {
             $contrat = $contratRepository->find($data["contrat"]);
         }
 
-        $updateFacturation = $serializer->deserialize(data: $request->getContent(), type: Facturation::class, format:"json", context: [AbstractNormalizer::OBJECT_TO_POPULATE => $facturation]);
+        $updateFacturation = $serializer->deserialize(data: $request->getContent(), type: Facturation::class, format: "json", context: [AbstractNormalizer::OBJECT_TO_POPULATE => $facturation]);
         $updateFacturation->setcontrat($contrat ?? $updateFacturation->getcontrat())->setStatus("on");
 
         $entityManager->persist(object: $updateFacturation);

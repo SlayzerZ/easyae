@@ -14,6 +14,7 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
@@ -30,31 +31,40 @@ class ContactController extends AbstractController
         $idCache = "getAllContacts";
         $contactJson = $cache->get($idCache, function (ItemInterface $item) use ($contactRepository, $serializer) {
             $item->tag("contact");
+            // $contratList = $contratRepository->findBy(['createdAt' => $userInterface->getUserIdentifier()]);
+            // if ($this->isGranted("ROLE_ADMIN")) {
+            //     $contratList = $contratRepository->findAll();
+            // }
             $contactList = $contactRepository->findAll();
-    
             $contactJson = $serializer->serialize($contactList, 'json', ['groups' => "contact"]);
-            
-            return $contactJson;
 
+            return $contactJson;
         });
 
         return new JsonResponse($contactJson, JsonResponse::HTTP_OK, [], true);
     }
-    
-    
+
+
     #[Route(path: '/{id}', name: 'api_contact_show', methods: ["GET"])]
     public function get(Contact $contact, SerializerInterface $serializer): JsonResponse
     {
+        // if (!$this->isGranted("ROLE_ADMIN")) {
+        // if ($contrat->getCreatedBy() != $userInterface->getUserIdentifier()) {
+        //     return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+        // }
+        // }
+
         $contactJson = $serializer->serialize($contact, 'json', ['groups' => "contact"]);
-        
+
         return new JsonResponse($contactJson, JsonResponse::HTTP_OK, [], true);
     }
 
     #[Route(name: 'api_contact_new', methods: ["POST"])]
+    #[IsGranted("ROLE_ADMIN", message: "Hanhanhaaaaan vous n'avez pas dit le mot magiiiiqueeuuuuuh")]
     public function create(ValidatorInterface $validator, TagAwareCacheInterface $cache, Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
     {
         $contact = $serializer->deserialize($request->getContent(), Contact::class, 'json');
-        
+
         $contact->setStatus("on")
             ->setCreatedAt(new \DateTime())
             ->setUpdatedAt(new \DateTime());
@@ -99,7 +109,7 @@ class ContactController extends AbstractController
             ['id' => $contact->getId()],
             UrlGeneratorInterface::ABSOLUTE_URL
         );
-        
+
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT, ["Location" => $location]);
     }
 
@@ -107,10 +117,9 @@ class ContactController extends AbstractController
     public function delete(TagAwareCacheInterface $cache, Contact $contact, Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = $request->toArray();
-        
+
         if (isset($data['force']) && $data['force'] === true) {
             $entityManager->remove($contact);
-
         } else {
             $contact
                 ->setStatus("off");
@@ -120,7 +129,7 @@ class ContactController extends AbstractController
         $entityManager->flush();
         $cache->invalidateTags(["contact"]);
 
-        
+
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
     }
 }

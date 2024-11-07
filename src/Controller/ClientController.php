@@ -12,6 +12,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
@@ -25,7 +27,10 @@ class ClientController extends AbstractController
 
         $clientJson = $cache->get($idCache, function (ItemInterface $item) use ($clientRepository, $serializer) {
             $item->tag("client");
-
+            // $contratList = $contratRepository->findBy(['createdAt' => $userInterface->getUserIdentifier()]);
+            // if ($this->isGranted("ROLE_ADMIN")) {
+            //     $contratList = $contratRepository->findAll();
+            // }
             $clientList = $clientRepository->findAll();
             return $serializer->serialize($clientList, 'json', ['groups' => ["client", "clientType"]]);
         });
@@ -40,11 +45,18 @@ class ClientController extends AbstractController
             return new JsonResponse(['error' => 'Client not found'], JsonResponse::HTTP_NOT_FOUND);
         }
 
+        // if (!$this->isGranted("ROLE_ADMIN")) {
+        // if ($contrat->getCreatedBy() != $userInterface->getUserIdentifier()) {
+        //     return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+        // }
+        // }
+
         $clientJson = $serializer->serialize($client, 'json', ['groups' => ["client"]]);
         return new JsonResponse($clientJson, JsonResponse::HTTP_OK, [], true);
     }
 
     #[Route(name: 'api_client_new', methods: ["POST"])]
+    #[IsGranted("ROLE_ADMIN", message: "Hanhanhaaaaan vous n'avez pas dit le mot magiiiiqueeuuuuuh")]
     public function create(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, TagAwareCacheInterface $cache): JsonResponse
     {
         $client = $serializer->deserialize($request->getContent(), Client::class, 'json');

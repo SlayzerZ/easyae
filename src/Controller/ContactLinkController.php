@@ -13,6 +13,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
@@ -22,8 +24,7 @@ class ContactLinkController extends AbstractController
 {
     public function __construct(
         private readonly TagAwareCacheInterface $cache
-    )
-    {}
+    ) {}
 
     #[Route(name: 'api_contact_link_index', methods: ["GET"])]
     public function getAll(ContactLinkRepository $contactLinkRepository, SerializerInterface $serializer): JsonResponse
@@ -32,6 +33,10 @@ class ContactLinkController extends AbstractController
         $contactLinkJson = $this->cache->get($idCache, function (ItemInterface $item) use ($contactLinkRepository, $serializer) {
             $item->tag('contactLink');
             $item->tag('contactLinkType');
+            // $contratList = $contratRepository->findBy(['createdAt' => $userInterface->getUserIdentifier()]);
+            // if ($this->isGranted("ROLE_ADMIN")) {
+            //     $contratList = $contratRepository->findAll();
+            // }
             $contactLinkList = $contactLinkRepository->findAll();
             return $serializer->serialize($contactLinkList, 'json', ['groups' => 'contactLink']);
         });
@@ -42,6 +47,12 @@ class ContactLinkController extends AbstractController
     #[Route(path: '/{id}', name: 'api_contact_link_show', methods: ["GET"])]
     public function get(ContactLink $contactLink, SerializerInterface $serializer): JsonResponse
     {
+        // if (!$this->isGranted("ROLE_ADMIN")) {
+        // if ($contrat->getCreatedBy() != $userInterface->getUserIdentifier()) {
+        //     return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+        // }
+        // }
+
         // $contactLinkList = $contactLinkRepository->find($id);
 
         $contactLinkJson = $serializer->serialize($contactLink, 'json', ['groups' => "contactLink"]);
@@ -50,6 +61,7 @@ class ContactLinkController extends AbstractController
     }
 
     #[Route(name: 'api_contact_link_new', methods: ["POST"])]
+    #[IsGranted("ROLE_ADMIN", message: "Hanhanhaaaaan vous n'avez pas dit le mot magiiiiqueeuuuuuh")]
     public function create(Request $request, ContactLinkTypeRepository $contactLinkTypeRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = $request->toArray();
@@ -82,7 +94,7 @@ class ContactLinkController extends AbstractController
         $entityManager->persist($updatedContactLink);
         $entityManager->flush();
         $this->cache->invalidateTags(['contactLink']);
-//        $contactLinkJson = $serializer->serialize($updatedContactLink, 'json', ['groups' => "contactLinkType"]);
+        //        $contactLinkJson = $serializer->serialize($updatedContactLink, 'json', ['groups' => "contactLinkType"]);
         $location = $urlGenerator->generate("api_contact_link_show", ['id' => $updatedContactLink->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT, ["Location" => $location]);
     }

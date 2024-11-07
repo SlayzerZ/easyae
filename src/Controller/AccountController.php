@@ -15,6 +15,7 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
@@ -30,11 +31,14 @@ class AccountController extends AbstractController
         $accountJson = $cache->get($idCache, function (ItemInterface $item) use ($accountRepository, $serializer) {
             $item->tag("account");
             $item->tag("client");
+            // $contratList = $contratRepository->findBy(['createdAt' => $userInterface->getUserIdentifier()]);
+            // if ($this->isGranted("ROLE_ADMIN")) {
+            //     $contratList = $contratRepository->findAll();
+            // }
             $accountList = $accountRepository->findAll();
             $accountJson = $serializer->serialize($accountList, 'json', ['groups' => "account"]);
 
             return $accountJson;
-
         });
 
 
@@ -45,11 +49,17 @@ class AccountController extends AbstractController
     #[Route(path: '/{id}', name: 'api_account_show', methods: ["GET"])]
     public function get(Account $account, SerializerInterface $serializer): JsonResponse
     {
+        // if (!$this->isGranted("ROLE_ADMIN")) {
+        // if ($contrat->getCreatedBy() != $userInterface->getUserIdentifier()) {
+        //     return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+        // }
+        // }
         $accountJson = $serializer->serialize($account, 'json', ['groups' => "account"]);
         return new JsonResponse($accountJson, JsonResponse::HTTP_OK, [], true);
     }
 
     #[Route(name: 'api_account_new', methods: ["POST"])]
+    #[IsGranted("ROLE_ADMIN", message: "Hanhanhaaaaan vous n'avez pas dit le mot magiiiiqueeuuuuuh")]
     public function create(ValidatorInterface $validator, TagAwareCacheInterface $cache, Request $request, ClientRepository $clientRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = $request->toArray();
@@ -99,12 +109,9 @@ class AccountController extends AbstractController
         $data = $request->toArray();
         if (isset($data['force']) && $data['force'] === true) {
             $entityManager->remove($account);
-
-
         } else {
             $account
-                ->setStatus("off")
-            ;
+                ->setStatus("off");
 
             $entityManager->persist($account);
         }

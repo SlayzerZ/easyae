@@ -16,6 +16,8 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 #[Route('/api/quantity-type')]
@@ -23,12 +25,16 @@ use Symfony\Contracts\Cache\TagAwareCacheInterface;
 class QuantityTypeController extends AbstractController
 {
     #[Route(name: 'api_quantity_type_index', methods: ["GET"])]
-    public function getAll(QuantityTypeRepository $quantityTypeRepository, SerializerInterface $serializer,TagAwareCacheInterface $cache): JsonResponse
+    public function getAll(QuantityTypeRepository $quantityTypeRepository, SerializerInterface $serializer, TagAwareCacheInterface $cache): JsonResponse
     {
         $idCache = "getAllQuantityType";
         $quantityTypeJson = $cache->get($idCache, function (ItemInterface $item) use ($quantityTypeRepository, $serializer) {
             $item->tag("quantityType");
             //$item->tag("product");
+            // $contratList = $contratRepository->findBy(['createdAt' => $userInterface->getUserIdentifier()]);
+            // if ($this->isGranted("ROLE_ADMIN")) {
+            //     $contratList = $contratRepository->findAll();
+            // }
             $quantityTypeList = $quantityTypeRepository->findAll();
             $quantityTypeJson = $serializer->serialize($quantityTypeList, 'json', ['groups' => "quantityType"]);
             return $quantityTypeJson;
@@ -38,12 +44,19 @@ class QuantityTypeController extends AbstractController
     #[Route(path: '/{id}', name: 'api_quantity_type_show', methods: ["GET"])]
     public function get(QuantityType $quantityType, SerializerInterface $serializer): JsonResponse
     {
+        // if (!$this->isGranted("ROLE_ADMIN")) {
+        // if ($contrat->getCreatedBy() != $userInterface->getUserIdentifier()) {
+        //     return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+        // }
+        // }
+
         $quantityTypeJson = $serializer->serialize($quantityType, 'json', ['groups' => "quantityType"]);
 
         return new JsonResponse($quantityTypeJson, JsonResponse::HTTP_OK, [], true);
     }
 
     #[Route(name: 'api_quantity_type_new', methods: ["POST"])]
+    #[IsGranted("ROLE_ADMIN", message: "Hanhanhaaaaan vous n'avez pas dit le mot magiiiiqueeuuuuuh")]
     public function create(ValidatorInterface $validator, TagAwareCacheInterface $cache, Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
     {
         $quantityType = $serializer->deserialize($request->getContent(), QuantityType::class, 'json', []);
@@ -67,7 +80,8 @@ class QuantityTypeController extends AbstractController
 
         $entityManager->persist($updatedQuantityType);
         $entityManager->flush();
-        $cache->invalidateTags(["quantityType"
+        $cache->invalidateTags([
+            "quantityType"
             //, "product"
         ]);
 
@@ -81,12 +95,9 @@ class QuantityTypeController extends AbstractController
         $data = $request->toArray();
         if (isset($data['force']) && $data['force'] === true) {
             $entityManager->remove($quantityType);
-
-
         } else {
             $quantityType
-                ->setStatus("off")
-            ;
+                ->setStatus("off");
             $entityManager->persist($quantityType);
         }
         $cache->invalidateTags(["quantityType"]);

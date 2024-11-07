@@ -13,7 +13,10 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
+
 #[Route('/api/info-type')]
 class InfoTypeController extends AbstractController
 {
@@ -23,6 +26,10 @@ class InfoTypeController extends AbstractController
         $idCache = "getAllInfoType";
         $infoTypeJson = $cache->get($idCache, function (ItemInterface $item) use ($infoTypeRepository, $serializer) {
             $item->tag("infoType");
+            // $contratList = $contratRepository->findBy(['createdAt' => $userInterface->getUserIdentifier()]);
+            // if ($this->isGranted("ROLE_ADMIN")) {
+            //     $contratList = $contratRepository->findAll();
+            // }
             $infoTypeList = $infoTypeRepository->findAll();
             $infoTypeJson = $serializer->serialize($infoTypeList, 'json', ['groups' => "infoType"]);
             return $infoTypeJson;
@@ -34,7 +41,11 @@ class InfoTypeController extends AbstractController
     #[Route(path: '/{id}', name: 'api_infoType_show', methods: ["GET"])]
     public function get(InfoType $infoType, SerializerInterface $serializer): JsonResponse
     {
-     
+        // if (!$this->isGranted("ROLE_ADMIN")) {
+        // if ($contrat->getCreatedBy() != $userInterface->getUserIdentifier()) {
+        //     return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+        // }
+        // }
 
         $infoTypeJson = $serializer->serialize($infoType, 'json', ['groups' => "infoType"]);
 
@@ -43,9 +54,10 @@ class InfoTypeController extends AbstractController
     }
 
     #[Route(name: 'api_infoType_new', methods: ["POST"])]
-    public function create(TagAwareCacheInterface $cache,Request $request, InfoTypeRepository $infoTypeRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
+    #[IsGranted("ROLE_ADMIN", message: "Hanhanhaaaaan vous n'avez pas dit le mot magiiiiqueeuuuuuh")]
+    public function create(TagAwareCacheInterface $cache, Request $request, InfoTypeRepository $infoTypeRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
     {
-     
+
         $infoType = $serializer->deserialize($request->getContent(), InfoType::class, 'json', []);
         $entityManager->persist($infoType);
         $entityManager->flush();
@@ -55,15 +67,14 @@ class InfoTypeController extends AbstractController
     }
 
     #[Route(path: "/{id}", name: 'api_infoType_edit', methods: ["PATCH"])]
-    public function update(TagAwareCacheInterface $cache,InfoType $infoType, UrlGeneratorInterface $urlGenerator, Request $request, InfoTypeRepository $infoTypeRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
+    public function update(TagAwareCacheInterface $cache, InfoType $infoType, UrlGeneratorInterface $urlGenerator, Request $request, InfoTypeRepository $infoTypeRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = $request->toArray();
 
 
         $updatedInfoType = $serializer->deserialize($request->getContent(), InfoType::class, 'json', [AbstractNormalizer::OBJECT_TO_POPULATE => $infoType]);
         $updatedInfoType
-            ->setStatus("on")
-        ;
+            ->setStatus("on");
         $entityManager->persist($updatedInfoType);
         $entityManager->flush();
         $cache->invalidateTags(["infoType"]);
@@ -72,20 +83,17 @@ class InfoTypeController extends AbstractController
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT, ["Location" => $location]);
     }
     #[Route(path: "/{id}", name: 'api_infoType_delete', methods: ["DELETE"])]
-    public function delete( TagAwareCacheInterface $cache,InfoType $infoType,UrlGeneratorInterface $urlGenerator, Request $request,SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
-   
-    
+    public function delete(TagAwareCacheInterface $cache, InfoType $infoType, UrlGeneratorInterface $urlGenerator, Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
+
+
     {
         $data = $request->toArray();
-    
+
         if (isset($data['force']) && $data['force'] === true) {
             $entityManager->remove($infoType);
-            
-
         } else {
             $infoType
-                ->setStatus("off")
-            ;
+                ->setStatus("off");
 
             $entityManager->persist($infoType);
         }
@@ -94,5 +102,4 @@ class InfoTypeController extends AbstractController
         $cache->invalidateTags(["infoType"]);
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
     }
-
 }

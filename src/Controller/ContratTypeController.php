@@ -14,6 +14,7 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
@@ -28,6 +29,10 @@ class ContratTypeController extends AbstractController
         $idCache = "getAllContratType";
         $contratTypeJson = $cache->get($idCache, function (ItemInterface $item) use ($contratTypeRepository, $serializer) {
             $item->tag("contratType");
+            // $contratList = $contratRepository->findBy(['createdAt' => $userInterface->getUserIdentifier()]);
+            // if ($this->isGranted("ROLE_ADMIN")) {
+            //     $contratList = $contratRepository->findAll();
+            // }
             $contratTypeList = $contratTypeRepository->findAll();
             $contratTypeJson = $serializer->serialize($contratTypeList, 'json', ['groups' => "contratType"]);
 
@@ -40,12 +45,19 @@ class ContratTypeController extends AbstractController
     #[Route(path: '/{id}', name: 'api_contrat_type_show', methods: ["GET"])]
     public function get(ContratType $contratType, SerializerInterface $serializer): JsonResponse
     {
+        // if (!$this->isGranted("ROLE_ADMIN")) {
+        // if ($contrat->getCreatedBy() != $userInterface->getUserIdentifier()) {
+        //     return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+        // }
+        // }
+
         $contratTypeJson = $serializer->serialize($contratType, 'json', ['groups' => "contratType"]);
 
         return new JsonResponse($contratTypeJson, JsonResponse::HTTP_OK, [], true);
     }
 
     #[Route(name: 'api_contrat_type_new', methods: ["POST"])]
+    #[IsGranted("ROLE_ADMIN", message: "Hanhanhaaaaan vous n'avez pas dit le mot magiiiiqueeuuuuuh")]
     public function create(ValidatorInterface $validator, TagAwareCacheInterface $cache, Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
     {
         $contratType = $serializer->deserialize($request->getContent(), ContratType::class, 'json', []);
@@ -70,8 +82,7 @@ class ContratTypeController extends AbstractController
     {
         $updatedContratType = $serializer->deserialize($request->getContent(), ContratType::class, 'json', [AbstractNormalizer::OBJECT_TO_POPULATE => $contratType]);
         $updatedContratType
-            ->setStatus("on")
-        ;
+            ->setStatus("on");
 
         $errors = $validator->validate($contratType);
         if (count($errors) > 0) {
@@ -95,8 +106,7 @@ class ContratTypeController extends AbstractController
             $entityManager->remove($contratType);
         } else {
             $contratType
-                ->setStatus("off")
-            ;
+                ->setStatus("off");
             $entityManager->persist($contratType);
         }
 

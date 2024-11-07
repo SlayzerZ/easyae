@@ -18,6 +18,7 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 #[Route('/api/product')]
@@ -33,7 +34,10 @@ class ProductController extends AbstractController
             $item->tag("product");
             $item->tag("productType");
             $item->tag("quantityType");
-
+            // $contratList = $contratRepository->findBy(['createdAt' => $userInterface->getUserIdentifier()]);
+            // if ($this->isGranted("ROLE_ADMIN")) {
+            //     $contratList = $contratRepository->findAll();
+            // }
             $productList = $productRepository->findAll();
             return $serializer->serialize($productList, 'json', ['groups' => "product"]);
         });
@@ -44,6 +48,11 @@ class ProductController extends AbstractController
     #[Route(path: '/{id}', name: 'api_product_show', methods: ["GET"])]
     public function get(Product $product, SerializerInterface $serializer): JsonResponse
     {
+        // if (!$this->isGranted("ROLE_ADMIN")) {
+        // if ($contrat->getCreatedBy() != $userInterface->getUserIdentifier()) {
+        //     return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+        // }
+        // }
 
         $productJson = $serializer->serialize($product, 'json', ['groups' => "product"]);
 
@@ -52,6 +61,7 @@ class ProductController extends AbstractController
     }
 
     #[Route(name: 'api_product_new', methods: ['POST'])]
+    #[IsGranted("ROLE_ADMIN", message: "Hanhanhaaaaan vous n'avez pas dit le mot magiiiiqueeuuuuuh")]
     public function create(ValidatorInterface $validator, TagAwareCacheInterface $cache, Request $request, ProductTypeRepository $productTypeRepository, QuantityTypeRepository $quantityTypeRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = $request->toArray();
@@ -75,14 +85,14 @@ class ProductController extends AbstractController
         $productJson = $serializer->serialize($product, 'json', ['groups' => "product"]);
         return new JsonResponse($productJson, Response::HTTP_CREATED, [], true);
     }
-    
+
     #[Route(path: '/{id}', name: 'api_product_edit', methods: ['PATCH'])]
     public function update(TagAwareCacheInterface $cache, Product $product, UrlGeneratorInterface $urlGenerator, Request $request, ProductTypeRepository $productTypeRepository, QuantityTypeRepository $quantityTypeRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = $request->toArray();
-        
+
         if (isset($data['type'])) {
-            
+
             $type = $productTypeRepository->find($data['type']);
         }
         if (isset($data['quantityType'])) {
@@ -112,12 +122,9 @@ class ProductController extends AbstractController
         $data = $request->toArray();
         if (isset($data['force']) && $data['force'] === true) {
             $entityManager->remove($product);
-
-
         } else {
             $product
-                ->setStatus("off")
-            ;
+                ->setStatus("off");
 
             $entityManager->persist($product);
         }
